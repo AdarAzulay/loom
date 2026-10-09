@@ -1,6 +1,7 @@
 import { deleteTrip, emptyLibrary, errorMessage, librarySchema, saveItem } from '../models/domain'
 import type { Item, Library } from '../models/domain'
 import type { LibraryRepository } from '../services/storage/repository'
+import type { PhotoRecord } from '../services/storage/photos'
 
 export interface LibrarySnapshot {
   data: Library | null
@@ -17,6 +18,7 @@ export class LibraryStore {
   private revision = 0
   private writing = false
   private loading: Promise<void> | null = null
+  private pendingPhotos = new Map<string, PhotoRecord>()
 
   constructor(private readonly repository: LibraryRepository) {}
 
@@ -41,13 +43,26 @@ export class LibraryStore {
     return this.loading
   }
 
-  update(change: (data: Library) => Library): void {
+  update(change: (data: Library) => Library, photos: readonly PhotoRecord[] = []): void {
     if (!this.snapshot.data) throw new Error('Wait for your saved library to load.')
-    this.commit(change(this.snapshot.data))
+    this.commit(change(this.snapshot.data), this.snapshot.removed, photos)
   }
 
-  private commit(draft: Library, removed = this.snapshot.removed) {
+  loadPhotos(ids: readonly string[]): Promise<PhotoRecord[]> {
+    return this.repository.loadPhotos ? this.repository.loadPhotos(ids) : Promise.resolve([])
+  }
+
+  loadAllPhotos(): Promise<PhotoRecord[]> {
+    return this.repository.loadAllPhotos ? this.repository.loadAllPhotos() : Promise.resolve([])
+  }
+
+  replace(data: Library, photos: readonly PhotoRecord[] = []) {
+    this.commit(data, [], photos)
+  }
+
+  private commit(draft: Library, removed = this.snapshot.removed, photos: readonly PhotoRecord[] = []) {
     const data = librarySchema.parse(draft)
+    for (const photo of photos) this.pendingPhotos.set(photo.id, photo)
     this.publish({ data, removed, dirty: true })
     if (!this.snapshot.error) void this.flush()
   }
@@ -86,9 +101,16 @@ export class LibraryStore {
     try {
       while (this.snapshot.dirty && this.snapshot.data) {
         const data = this.snapshot.data
+        const photos = [...this.pendingPhotos.values()]
+        this.pendingPhotos.clear()
         this.publish({ status: 'saving' })
-        const saved = await this.repository.save(data, this.revision)
-        this.revision = saved.revision
+        try {
+          const saved = await this.repository.save(data, this.revision, photos)
+          this.revision = saved.revision
+        } catch (error) {
+          for (const photo of photos) if (!this.pendingPhotos.has(photo.id)) this.pendingPhotos.set(photo.id, photo)
+          throw error
+        }
         // Edits made during this write are retained and written next.
         this.publish({ dirty: this.snapshot.data !== data })
       }

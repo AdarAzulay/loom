@@ -15,7 +15,7 @@ describe('hydration and saving', () => {
     const loading = store.load()
     expect(() => store.update(() => emptyLibrary())).toThrow('load')
     expect(repository.save).not.toHaveBeenCalled()
-    resolve({ schemaVersion: 1, revision: 8, data: populatedLibrary() })
+      resolve({ schemaVersion: 3, revision: 8, data: populatedLibrary() })
     await loading
     expect(store.getSnapshot().data?.trips).toEqual([trip])
     expect(repository.save).not.toHaveBeenCalled()
@@ -34,7 +34,7 @@ describe('hydration and saving', () => {
     let resolve!: (value: Envelope) => void
     const save = vi.fn<LibraryRepository['save']>()
       .mockImplementationOnce(() => new Promise(done => { resolve = done }))
-      .mockImplementation(async (data, revision) => ({ data, revision: revision + 1, schemaVersion: 1 }))
+      .mockImplementation(async (data, revision) => ({ data, revision: revision + 1, schemaVersion: 3 }))
     const store = new LibraryStore({ load: async () => null, save })
     await store.load()
     store.update(data => saveTrip(data, trip))
@@ -42,14 +42,14 @@ describe('hydration and saving', () => {
     store.update(data => createDay(data, day).data)
     store.update(data => saveItem(data, item))
     expect(save).toHaveBeenCalledTimes(1)
-    resolve({ schemaVersion: 1, revision: 1, data: first })
+      resolve({ schemaVersion: 3, revision: 1, data: first })
     await settled(store)
     expect(save).toHaveBeenCalledTimes(2)
     expect(save.mock.calls[1]?.[0].items).toEqual([item])
     expect(save.mock.calls[1]?.[1]).toBe(1)
   })
   it('preserves edits on write failure, including newer edits, then retries the latest draft', async () => {
-    const save = vi.fn<LibraryRepository['save']>().mockRejectedValueOnce(new Error('Disk full')).mockImplementation(async (data, revision) => ({ data, revision: revision + 1, schemaVersion: 1 }))
+    const save = vi.fn<LibraryRepository['save']>().mockRejectedValueOnce(new Error('Disk full')).mockImplementation(async (data, revision) => ({ data, revision: revision + 1, schemaVersion: 3 }))
     const store = new LibraryStore({ load: async () => null, save })
     await store.load()
     store.update(() => populatedLibrary())
@@ -82,7 +82,7 @@ describe('hydration and saving', () => {
   })
   it('deletes a trip cascade and clears undo entries owned by that trip', async () => {
     const otherTrip = { id: 'trip-b', name: 'Other trip', startDate: '2028-04-01', endDate: '2028-04-03' }
-    const otherDay = { id: 'day-b', tripId: otherTrip.id, date: '2028-04-01', city: 'Tokyo', title: '', notes: '' }
+    const otherDay = { id: 'day-b', tripId: otherTrip.id, date: '2028-04-01', city: 'Tokyo', title: '', notes: '', country: 'Japan', timeZone: 'Asia/Tokyo', currency: 'JPY' as const }
     const otherItem = { ...item, id: 'item-b', tripId: otherTrip.id, dayId: otherDay.id, title: 'Other trip item' }
     const repository = new IndexedDbRepository(crypto.randomUUID())
     const store = new LibraryStore(repository)

@@ -5,8 +5,9 @@ import { itemTypes, orderedItems } from '../models/domain'
 import type { Item, Library, Trip } from '../models/domain'
 import { itemConfig } from '../models/itemTypes'
 import { searchItem } from './Home'
+import type { LibraryStore } from '../app/libraryStore'
 
-export function Items({ data, trip, onItem, onAdd }: { data: Library; trip: Trip; onItem: (item: Item) => void; onAdd: () => void }) {
+export function Items({ data, trip, store, onItem, onAdd }: { data: Library; trip: Trip; store: LibraryStore; onItem: (item: Item) => void; onAdd: () => void }) {
   const [query, setQuery] = useState('')
   const [type, setType] = useState('all')
   const [booking, setBooking] = useState('all')
@@ -19,6 +20,6 @@ export function Items({ data, trip, onItem, onAdd }: { data: Library; trip: Trip
       <SelectField label="Booking" value={booking} onChange={event => setBooking(event.target.value)}><option value="all">All items</option><option value="booked">Booked</option><option value="planned">To book</option><option value="none">No booking</option></SelectField>
     </div></div>
     <div className="section-heading"><h2>Saved items <span className="count">{items.length}</span></h2></div>
-    {items.length ? <div className="stack">{items.map(item => <ItemCard key={item.id} item={item} data={data} onOpen={onItem} />)}</div> : <EmptyState title={all.length ? 'Nothing matches just yet.' : 'Keep it all together.'} description={all.length ? 'Try a different search or filter.' : 'Save places, transport, bookings, and notes. Assign a day whenever you’re ready.'} action={!all.length && <Button onClick={onAdd}>Add your first item</Button>} />}
+    {items.length ? <div className="stack">{items.map(item => <ItemCard key={item.id} item={item} data={data} store={store} onOpen={onItem} />)}</div> : <EmptyState title={all.length ? 'Nothing matches just yet.' : 'Keep it all together.'} description={all.length ? 'Try a different search or filter.' : 'Save places, transport, bookings, and notes. Assign a day whenever you’re ready.'} action={!all.length && <Button onClick={onAdd}>Add your first item</Button>} />}
   </>
 }

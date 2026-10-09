@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createDay, deleteTrip, emptyLibrary, isSafeUrl, librarySchema, saveItem, saveTrip, updateDay } from './domain'
+import { createDay, createItem, deleteTrip, emptyLibrary, isSafeUrl, librarySchema, saveItem, saveTrip, updateDay } from './domain'
 import { formatDate, isDateOnly } from './dates'
 import { day, item, populatedLibrary, trip } from '../test/fixtures'
 
@@ -31,12 +31,12 @@ describe('library boundaries', () => {
     expect(updated.items).toEqual([item])
     expect(() => updateDay(data, { ...day, date: '2028-02-30' })).toThrow()
     expect(() => updateDay(data, { ...day, date: '2028-03-01' })).not.toThrow()
-    const withSecondDay = createDay(data, { id: 'day-b', tripId: trip.id, date: '2028-03-01', city: 'Busan', title: '', notes: '' }).data
+    const withSecondDay = createDay(data, { id: 'day-b', tripId: trip.id, date: '2028-03-01', city: 'Busan', title: '', notes: '', country: 'South Korea', timeZone: 'Asia/Seoul', currency: 'KRW' }).data
     expect(() => updateDay(withSecondDay, { ...day, date: '2028-03-01' })).toThrow('only one day')
   })
   it('deletes one trip as a validated cascade while preserving another trip', () => {
     const otherTrip = { id: 'trip-b', name: 'Tokyo only', startDate: '2028-04-01', endDate: '2028-04-03' }
-    const otherDay = { id: 'day-b', tripId: otherTrip.id, date: '2028-04-01', city: 'Tokyo', title: '', notes: '' }
+    const otherDay = { id: 'day-b', tripId: otherTrip.id, date: '2028-04-01', city: 'Tokyo', title: '', notes: '', country: 'Japan', timeZone: 'Asia/Tokyo', currency: 'JPY' as const }
     const otherItem = { ...item, id: 'item-b', tripId: otherTrip.id, dayId: otherDay.id, title: 'Other trip item' }
     const data = createDay(saveItem(createDay(saveTrip(populatedLibrary(), otherTrip), otherDay).data, otherItem), { ...day, id: 'duplicate-day', tripId: trip.id, date: '2028-03-01', city: 'Seoul', title: '', notes: '' }).data
     const result = deleteTrip(data, trip.id)
@@ -61,6 +61,14 @@ describe('library boundaries', () => {
     const { address: _address, ...base } = item as Extract<typeof item, { address: string }>
     void _address
     expect(() => saveItem(populatedLibrary(), { ...base, type: 'stay', address: '', checkIn: '2028-03-02', checkOut: '2028-03-01' })).toThrow('Check-out')
+  })
+  it('allocates unique IDs when creating a second item of the same type', () => {
+    const data = populatedLibrary()
+    const first = createItem(data, { ...item, id: item.id }).item
+    const secondResult = createItem({ ...data, items: [first] }, { ...first, id: first.id, title: 'Second flight' })
+    expect(secondResult.item.id).not.toBe(first.id)
+    expect(secondResult.data.items).toHaveLength(2)
+    expect(secondResult.data.items.map(record => record.title)).toEqual([first.title, 'Second flight'])
   })
   it.each(['javascript:alert(1)', 'data:text/html,hi', '/relative', 'https://user:pass@example.com', 'file:///tmp/a'])('rejects unsafe link %s', url => expect(isSafeUrl(url)).toBe(false))
   it('accepts deliberate web links and empty optional links', () => {

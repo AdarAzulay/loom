@@ -1,39 +1,31 @@
-# Step 1 verification
+# Loom verification
 
-Reverified after the Loom rename on 27 September 2026 with Node **24.19.0** and project-local npm **12.1.0** on macOS.
+Reverified for the full local-first roadmap pass on 9 October 2026 with Node **23.10.0** and npm **12.1.0** on macOS.
 
 | Check | Result |
 |---|---|
-| Locked clean install (`npm ci`) | Passed; 203 packages installed; audit reported 0 vulnerabilities |
 | ESLint (`npm run lint`) | Passed with zero warnings |
 | Strict TypeScript (`npm run typecheck`) | Passed |
-| Unit/integration (`npm test`) | **37 passed** across 3 files |
+| Unit/integration (`npm test`) | Passed across 4 files, including 42 assertions |
 | Production build (`npm run build`) | Passed; relative assets generated in `dist/` |
-| Playwright (`npm run test:e2e`) | **8 passed** across desktop Chromium and simulated iPhone WebKit |
-| Local preview | HTTP 200 at `http://127.0.0.1:4173/` at handoff |
+| Playwright (`npm run test:e2e`) | Passed on desktop Chromium and simulated iPhone WebKit |
 
-The rename regression confirms that the default adapter still loads existing data from the unchanged `roam-library` database. Browser checks also verify the Loom page title, accessible brand label, and new L favicon.
+The model is now schema v3. v1 and v2 migrations validate the replacement, write and read a pending record, then commit only the verified v3 record while retaining the original in `library-v1` or `library-v2`. Tests cover a realistic v1 sample, a v2 sample, duplicate-ID creation regression, trip/day relationships, stay date validation, stale writes, failed saves, and Unicode.
 
-The unit/integration suite covers leap years and arbitrary calendar years, date-only formatting, trip ranges, duplicate days, stable IDs, cross-trip references, type boundaries, unsafe links, stay dates, day edits, trip deletion cascades, Unicode storage round-trip, future/corrupt envelope rejection, stale-tab writes, hydration gating, failed load/retry, serialized pending writes, failed save/retry, and the trip → day → item → edit → reload → remove → undo journey.
+The app now supports flights, hotels/stays, transport, trains, car/taxi, restaurants, cafes, museums, shows, theme parks, shopping, tours, tickets/passes, documents, places, and notes. Every record has a unique creation ID, status, optional price, notes, links, map place, and photos. Days carry city, country, IANA time zone, and KRW/JPY labels. Multi-day stays project onto every occupied day, and the timeline separates time chips from cards. Drag reorder, duplicate, move, delete, and undo use the same local save path.
 
-The browser suite drives real forms against the production build and real IndexedDB: create/edit a trip, create/edit a leap-day itinerary, add/edit a booked restaurant with Unicode text, reject an unsafe link, reload, verify the same item in Days/Items, remove/undo/reload, search by booking reference, confirm trip-first Add, update profile, change appearance, check trip isolation, cancel trip deletion, delete one of two trips, delete the last trip, and reload the empty state. Both engines also serve/reload the build under `/roam/#profile` with no server rewrite. All five screens pass horizontal-overflow checks at 320px; WebKit also runs at 390 × 844. A selected-trip control must meet a 44px minimum height.
+Profile supports display name, avatar upload/removal (resized to about 512px), appearance, glass level, and Sky/Blush/Sand palettes. Backups include the validated library, avatar, and item photos; restore validates the complete file and asks before replacing local data. The 20-photo fixture is 20 × 64 KiB = **1,310,720 bytes (1.25 MiB)** raw. Base64 packaging makes that payload about **1.67 MiB**, plus JSON metadata; actual backups vary with image compression and metadata.
 
-Screenshots of light/dark empty Home, long trip names at 320px, and the populated Days screen were inspected. Review caught a too-short native WebKit select and insufficient navigation opacity; both were fixed and the browser suite rerun successfully. The light empty-state screenshot contains no sample records. Populated test screenshots show test-only data.
+The design pass replaces the green system with palette tokens, translucent Clear/Soft/Solid glass, safe-area bottom padding, compact grouped Add tiles, a compact trip hero, timeline layout, inline illustrations, flight/hotel detail cards, map previews and external Maps links, status-dot storage explanation, and standalone PWA metadata under `/loom/`.
 
-## Environment notes
+The Playwright suite verifies the production build and repository-subpath reloads on Chromium and WebKit, including the existing trip/day/item/edit/remove/undo journeys. It does not prove physical iPhone behavior. A real-device pass is still needed for Home Screen installation, Safari/WebKit storage clearing, persistent-storage prompts, camera/photo selection, VoiceOver, actual contrast settings, and safe-area behavior.
 
-The machine’s original npm 10 resolver failed during optional peer resolution. A temporary npm 12 installation under ignored `work/tooling` resolved it; `.npmrc` uses HTTPS and bounded fetch timeouts. The global runtime/configuration was not changed. Reproducible setup is Node 24 + npm 12 + `npm ci`.
+## iPhone storage research
 
-Test browsers were installed in ignored `work/browsers`. To reuse that cache here:
+WebKit documents `navigator.storage.estimate()`, `persisted()`, and `persist()` as supported in Safari 17 and WebKit apps on iOS 17+. Persistent mode is granted by browser heuristics, with Home Screen use being one signal. A Home Screen web app has separate cookies and storage from Safari, and WebKit says its data is isolated from Safari’s tracking-prevention cleanup. Clearing Safari history is therefore not a backup or a reliable way to remove/restore Loom’s Home Screen data. Persistent mode reduces automatic eviction risk, but quota limits, storage pressure, deleting the Home Screen app, or clearing its website data can still remove it. Loom exposes a “Protect local storage” action and still recommends backups.
 
-```sh
-PLAYWRIGHT_BROWSERS_PATH="$PWD/work/browsers" npm run test:e2e
-```
+Sources: [WebKit storage policy](https://webkit.org/blog/14403/updates-to-storage-policy/), [WebKit tracking prevention](https://webkit.org/tracking-prevention/), and Apple’s [Home Screen web app guidance](https://developer.apple.com/videos/play/wwdc2023/10120/).
 
-Browser launching required permission for macOS helper processes outside the restricted sandbox. The completed runs used Chromium 153 and WebKit 26.6. npm reported an optional `fsevents` install script blocked by its default script policy; install, tests, build, and preview all passed without enabling it. The pinned ESLint 9 package prints an upstream support deprecation during installation; lint itself passes. No global upgrades were made.
+## Not included by the public static release
 
-## Not verified or implemented
-
-No physical iPhone, actual Safari/Home Screen installation, VoiceOver audit, full contrast audit, or old-browser matrix was tested. Reduced-transparency/opaque fallbacks are implemented but not separately tested through OS preferences. Multi-device sync, deployment, maps, weather, offline app caching, GitHub saves, import/restore, full flight time-zone scheduling, backend accounts, email, AI, and expenses are outside this milestone. Local data can be removed by browser clearing/eviction; failed drafts stay in memory until recovered. Undo history does not survive reload.
-
-The standalone Git repository is initialized at `/Users/adaraz/Documents/Codex/roam`, with no commits or remotes. Nothing has been pushed or published.
+There is no backend, login, email import, AI, expenses, live weather, live geocoding, or cloud sync. The map preview is intentionally local and lightweight; external Maps links are available from saved coordinates. A physical iPhone/Home Screen experiment and a full OS contrast/VoiceOver audit remain manual checks.

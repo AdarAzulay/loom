@@ -1,0 +1,11 @@
+{
+  "name": "Loom · Personal trip planner",
+  "short_name": "Loom",
+  "start_url": "/loom/",
+  "scope": "/loom/",
+  "display": "standalone",
+  "background_color": "#f4f8fd",
+  "theme_color": "#f4f8fd",
+  "description": "A calm, local-first home for trips, days, and places.",
+  "icons": [{ "src": "/loom/loom.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
