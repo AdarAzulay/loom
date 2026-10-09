@@ -1,0 +1,48 @@
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color-scheme: light;
+  --page: #eeede8;
+  --ink: #252e30;
+  --muted: #626c6c;
+  --paper: #f8f7f3;
+  --glass: #fbfbf5b8;
+  --edge: #ffffffdc;
+  --line: #697a742c;
+  --soft: #e2e4dc;
+  --accent: #3f5550;
+  --accent-ink: #ffffff;
+  --warm: #ede0cc;
+  --cool: #d0dedc;
+  --focus: #34746a;
+  --error: #883926;
+  --error-bg: #fff0e8;
+  --shadow: 0 12px 36px #28393008, inset 0 1px 0 #ffffff80;
+  --radius: 24px;
+  color: var(--ink);
+  background: var(--page);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-appearance='dark'] {
+  color-scheme: dark;
+  --page: #1c2223; --ink: #eeefe9; --muted: #adb9b6;
+  --paper: #292f30; --glass: #303838d9; --edge: #d2ded02a;
+  --line: #aab8ae33; --soft: #3a4441; --accent: #c9d9ce;
+  --accent-ink: #1c2c25; --warm: #444137; --cool: #354744;
+  --focus: #add6c9; --error: #ffb7a1; --error-bg: #432f2a;
+  --shadow: 0 12px 36px #00000016, inset 0 1px 0 #ffffff0a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-appearance='light']):not([data-appearance='dark']) {
+    color-scheme: dark;
+    --page: #1c2223; --ink: #eeefe9; --muted: #adb9b6;
+    --paper: #292f30; --glass: #303838d9; --edge: #d2ded02a;
+    --line: #aab8ae33; --soft: #3a4441; --accent: #c9d9ce;
+    --accent-ink: #1c2c25; --warm: #444137; --cool: #354744;
+    --focus: #add6c9; --error: #ffb7a1; --error-bg: #432f2a;
+    --shadow: 0 12px 36px #00000016, inset 0 1px 0 #ffffff0a;
+  }
+}
